@@ -1,30 +1,60 @@
 // Store our API endpoint as queryUrl.
-let queryUrl = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_day.geojson";
+let queryUrl = 'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_month.geojson';
 
 // Perform a GET request to the query URL.
 d3.json(queryUrl).then(function (data) {
     // Once we get a response, send the data.features object to the createFeatures function.
-    console.log(data);  // Log the data to the console
     createFeatures(data.features);
 });
+
+// Functions to declare: 
+// Function to get color based on depth
+let colorScale = d3.scaleLinear()
+    .domain([10, 30, 50, 70, 90])
+    .range(['green', 'yellow', 'yelloworange', 'darkorange', 'redorange', 'red']);
+
+function getColor(depth) {
+    return colorScale(depth);
+}
+
+// A function to determine the marker size based on the magnitude.
+function markerSize(magnitude) {
+    return magnitude * 5000;
+}
+
+// A function to add a color legend based on depth.
+function addLegend(map) {
+    let legend = L.control({ position: 'bottomright' });
+
+    legend.onAdd = function (map) {
+        let div = L.DomUtil.create('div', 'info legend');
+        let colors = ['#00FF00', '#9ACD32', '#FFFF00', '#FFA500', '#FF4500', '#FF0000'];
+        let labels = ['<10', '10-30', '30-50', '50-70', '70-90', '90+'];
+
+        div.innerHTML = '<h1>Earthquake Depth<br />(km)</h1>' +
+            "<div class=\"labels\">" +
+            "<div class=\"min\">" + labels[0] + "</div>" +
+            "<div class=\"max\">" + labels[5] + "</div>" +
+            "</div>";
+
+        // Loop through depth ranges and generate a label with corresponding color.
+        for (let i = 0; i < colors.length; i++) {
+            div.innerHTML +=
+                '<i style="background:' + colors[i] + '"></i> ' +
+                labels[i] + '<br>';
+        }
+
+        return div;
+    };
+
+    legend.addTo(map);
+}
+
+
 
 function createFeatures(earthquakeData) {
 
     // Define a function that we want to run once for each feature in the features array.
-    // A function to determine the marker size based on the magnitude.
-    function markerSize(magnitude) {
-      return Math.sqrt(magnitude) * 50;
-    }
-
-    // Function to get color based on depth
-    function getColor(depth) {
-
-        // Customize this function based on your depth-to-color mapping
-        if (depth < 10) return "lightblue";
-        else if (depth < 30) return "blue";
-        else if (depth < 50) return "darkblue";
-        else return "black";
-    }
 
     // Define arrays to hold the created earthquake markers.
     let quakeMarkers = [];
@@ -32,27 +62,26 @@ function createFeatures(earthquakeData) {
     // Loop through earthquake data and create circle markers.
     for (let i = 0; i < earthquakeData.length; i++) {
         // Calculate the radius based on earthquake magnitude.
-        let radius = markerSize(earthquakeData[i].properties.mag);
+        var radius = markerSize(earthquakeData[i].properties.mag);
     
         // Calculate the color based on earthquake depth.
-        let depthColor = getColor(earthquakeData[i].geometry.coordinates[2]);
+        var depthColor = getColor(earthquakeData[i].geometry.coordinates[2]);
     
         // Create a circle marker with the calculated radius.
         quakeMarkers.push(
-            L.circle(earthquakeData[i].geometry.coordinates[0, 1], {
+            L.circle([earthquakeData[i].geometry.coordinates[1], earthquakeData[i].geometry.coordinates[0]], {
                 stroke: false,
-                fillOpacity: 0.75,
-                color: depthColor,
+                fillOpacity: 0.50,
+                color: 'black',
                 fillColor: depthColor,
-                radius: radius
-            }).bindPopup(`<h3>${earthquakeData[i].properties.mag}</h3><hr><p>${new Date(earthquakeData[i].properties.time)}</p>`)
+                radius: radius 
+            }).bindTooltip(`<h3>Magnitude: ${earthquakeData[i].properties.mag}</h3><h3>Depth: ${earthquakeData[i].geometry.coordinates[2]} km</h3><hr><p>${new Date(earthquakeData[i].properties.time)}</p>`, {sticky: true})
         );
-        console.log("Radius:", radius, "Color:", depthColor);
     }
     
     
     // Create a GeoJSON layer that contains the earthquake markers.
-    let earthquakes = L.geoJSON(quakeMarkers);
+    let earthquakes = L.layerGroup(quakeMarkers);
 
     // Send our earthquakes layer to the createMap function.
     createMap(earthquakes);
@@ -71,8 +100,8 @@ function createMap(earthquakes) {
 
     // Create a baseMaps object.
     let baseMaps = {
-        "Street Map": street,
-        "Topographic Map": topo
+        'Street Map': street,
+        'Topographic Map': topo
     };
 
     // Create an overlay object to hold our earthquake markers.
@@ -81,11 +110,14 @@ function createMap(earthquakes) {
     };
 
     // Create our map, giving it the streetmap and earthquake layers to display on load.
-    let myMap = L.map("map", {
+    let myMap = L.map('map', {
         center: [37.09, -95.71],
         zoom: 3,
-        layers: [street, earthquakes]
+        layers: [street, earthquakes],
     });
+
+    // Add legend.
+    addLegend(myMap);
 
     // Create a layer control.
     // Pass it our baseMaps and overlayMaps.
@@ -93,4 +125,26 @@ function createMap(earthquakes) {
     L.control.layers(baseMaps, overlayMaps, {
         collapsed: false
     }).addTo(myMap);
+
 }
+
+// // Create a function to display a legend.
+// function addLegend(map) {
+//     let legend = L.control({ position: 'bottomright' });
+
+//     legend.onAdd = function (map) {
+//         let div = L.DomUtil.create('div', 'info legend');
+//         let depths = [0, 10, 30, 50, 70, 90]; // Adjust based on your depth categories
+
+//         for (let i = 0; i < depths.length; i++) {
+//             div.innerHTML +=
+//                 '<i style="background:' + getColor(depths[i] + 1) + '"></i> ' +
+//                 depths[i] + (depths[i + 1] ? '&ndash;' + depths[i + 1] + ' km<br>' : '+ km');
+//         }
+
+//         return div;
+//     };
+
+//     legend.addTo(map);
+// }
+
