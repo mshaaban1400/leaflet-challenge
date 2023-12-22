@@ -10,8 +10,8 @@ d3.json(queryUrl).then(function (data) {
 // Functions to declare: 
 // Function to get color based on depth
 let colorScale = d3.scaleLinear()
-    .domain([10, 30, 50, 70, 90])
-    .range(['green', 'yellow', 'yelloworange', 'darkorange', 'redorange', 'red']);
+    .domain([0, 10, 30, 50, 70, 90])
+    .range(['#00FF00', 'greenyellow', '#FFFF00', '#FFA500', '#FF4500', '#FF0000']);
 
 function getColor(depth) {
     return colorScale(depth);
@@ -19,7 +19,7 @@ function getColor(depth) {
 
 // A function to determine the marker size based on the magnitude.
 function markerSize(magnitude) {
-    return magnitude * 5000;
+    return magnitude * 10000;
 }
 
 // A function to add a color legend based on depth.
@@ -27,30 +27,26 @@ function addLegend(map) {
     let legend = L.control({ position: 'bottomright' });
 
     legend.onAdd = function (map) {
-        let div = L.DomUtil.create('div', 'info legend');
-        let colors = ['#00FF00', '#9ACD32', '#FFFF00', '#FFA500', '#FF4500', '#FF0000'];
-        let labels = ['<10', '10-30', '30-50', '50-70', '70-90', '90+'];
+        let div = L.DomUtil.create('div', 'info legend'),
+            colors = ['#00FF00', '#9ACD32', '#FFFF00', '#FFA500', '#FF4500', '#FF0000'],
+            depths = [0, 10, 30, 50, 70, 90],
+            labels = [];
 
-        div.innerHTML = '<h1>Earthquake Depth<br />(km)</h1>' +
-            "<div class=\"labels\">" +
-            "<div class=\"min\">" + labels[0] + "</div>" +
-            "<div class=\"max\">" + labels[5] + "</div>" +
-            "</div>";
+        div.innerHTML = '<h1>Earthquake Depth<br />(km)</h1>';
 
-        // Loop through depth ranges and generate a label with corresponding color.
-        for (let i = 0; i < colors.length; i++) {
+        // loop through our density intervals and generate a label with a colored square for each interval
+        for (let i = 0; i < depths.length; i++) {
             div.innerHTML +=
-                '<i style="background:' + colors[i] + '"></i> ' +
-                labels[i] + '<br>';
+                '<i style="background:' + getColor(parseFloat(depths[i])) + '"></i> ' +
+                depths[i] + (depths[i + 1] ? '&ndash;' + depths[i + 1] + '<br>' : '+');
         }
+
 
         return div;
     };
 
     legend.addTo(map);
 }
-
-
 
 function createFeatures(earthquakeData) {
 
@@ -70,7 +66,8 @@ function createFeatures(earthquakeData) {
         // Create a circle marker with the calculated radius.
         quakeMarkers.push(
             L.circle([earthquakeData[i].geometry.coordinates[1], earthquakeData[i].geometry.coordinates[0]], {
-                stroke: false,
+                stroke: true,
+                weight: 0.25,
                 fillOpacity: 0.50,
                 color: 'black',
                 fillColor: depthColor,
@@ -127,24 +124,3 @@ function createMap(earthquakes) {
     }).addTo(myMap);
 
 }
-
-// // Create a function to display a legend.
-// function addLegend(map) {
-//     let legend = L.control({ position: 'bottomright' });
-
-//     legend.onAdd = function (map) {
-//         let div = L.DomUtil.create('div', 'info legend');
-//         let depths = [0, 10, 30, 50, 70, 90]; // Adjust based on your depth categories
-
-//         for (let i = 0; i < depths.length; i++) {
-//             div.innerHTML +=
-//                 '<i style="background:' + getColor(depths[i] + 1) + '"></i> ' +
-//                 depths[i] + (depths[i + 1] ? '&ndash;' + depths[i + 1] + ' km<br>' : '+ km');
-//         }
-
-//         return div;
-//     };
-
-//     legend.addTo(map);
-// }
-
